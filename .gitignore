@@ -1,0 +1,38 @@
+# Ignore wwwroot files
+wwwroot/
+
+# Build output
+bin/
+obj/
+bin
+obj
+
+Uploads/
+Uploads
+# IDE files
+.vs/
+.vscode/
+*.user
+
+# OS files
+.DS_Store
+Thumbs.db
+Logs/
+Logs
+publish
+publish/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Dependencies
+node_modules/
+/temp
+temp
+# Build artifacts
+*.dll
+*.pdb
+*.exe
