@@ -7,6 +7,8 @@ obj/
 bin
 obj
 
+deploy.config.json
+
 Uploads/
 Uploads
 # IDE files
