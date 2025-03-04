@@ -160,10 +160,18 @@
 
   async function downloadFile(fileName: string) {
     try {
+      let progress = 0;
       const blob = await apiService.downloadFile(
         explorerPersistStatus.currentPath
           ? `${explorerPersistStatus.currentPath}/${fileName}`
           : fileName,
+        (p) => {
+          progress = p;
+          explorerInstantStatus.isUploading=true;
+          explorerInstantStatus.uploadProgress=Math.round(progress * 100);
+          // 更新进度条显示
+          // showToast(`下载进度：${Math.round(progress * 100)}%`, "info");
+        }
       );
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -173,12 +181,20 @@
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      setTimeout(() => {
+        explorerInstantStatus.uploadProgress=0;
+        explorerInstantStatus.isUploading=false;
+      }, 1500);
       showToast("文件下载成功", "success");
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : "文件下载失败",
         "error",
       );
+      setTimeout(() => {
+        explorerInstantStatus.uploadProgress=0;
+        explorerInstantStatus.isUploading=false;
+      }, 1500);
     }
   }
   function handleClickOutside(event: MouseEvent) {

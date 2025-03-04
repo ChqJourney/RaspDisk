@@ -282,7 +282,7 @@ class ApiService {
     }
 
     // 下载文件
-    async downloadFile(fileName: string): Promise<Blob> {
+    async downloadFile(fileName: string, onProgress?: (progress: number) => void): Promise<Blob> {
         const url = `${this.baseURL}/file/download/${fileName}`;
         const headers = new Headers();
         const apiKey = localStorage.getItem('apiKey');
@@ -290,13 +290,51 @@ class ApiService {
         if (apiKey) {
             headers.set('X-Api-Key', apiKey);
         }
-
+    
         const response = await fetch(url, { headers });
         if (!response.ok) {
             throw this.handleError(new Error(`HTTP error! status: ${response.status}`));
         }
-
-        return response.blob();
+    
+        // 获取文件大小
+        const contentLength = response.headers.get('Content-Length');
+        const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
+    
+        // 如果文件小于10MB或没有进度回调，直接返回blob
+        if (totalSize <= 10 * 1024 * 1024 || !onProgress) {
+            return response.blob();
+        }
+    
+        // 大文件下载处理
+        // 检查response.body是否为null
+        if (!response.body) {
+            throw new Error('Response body is null');
+        }
+        const reader = response.body.getReader();
+        let receivedLength = 0;
+        const chunks: Uint8Array[] = [];
+    
+        while (true) {
+            const { done, value } = await reader.read();
+    
+            if (done) {
+                break;
+            }
+    
+            chunks.push(value);
+            receivedLength += value.length;
+            onProgress(receivedLength / totalSize);
+        }
+    
+        // 合并所有chunks
+        const chunksAll = new Uint8Array(receivedLength);
+        let position = 0;
+        for (const chunk of chunks) {
+            chunksAll.set(chunk, position);
+            position += chunk.length;
+        }
+    
+        return new Blob([chunksAll]);
     }
 
     async moveFile(oldPath: string, newPath: string): Promise<void> {

@@ -428,11 +428,48 @@ namespace RaspberryPiFileServer.Controllers
                 return NotFound();
             }
 
+            var fileInfo = new FileInfo(filePath);
+            var fileSize = fileInfo.Length;
             var mimeType = GetMimeType(fileName);
-            _logger.LogInformation("文件下载成功：{FileName}，大小：{FileSize} bytes，MIME类型：{MimeType}", 
-                fileName, new FileInfo(filePath).Length, mimeType);
-            var fileStream = System.IO.File.OpenRead(filePath);
-            return File(fileStream, mimeType, fileName);
+        
+            if (fileSize <= 10 * 1024 * 1024) // 10MB
+            {
+                _logger.LogInformation("小文件下载成功：{FileName}，大小：{FileSize} bytes，MIME类型：{MimeType}", 
+                    fileName, fileSize, mimeType);
+                var fileStream = System.IO.File.OpenRead(filePath);
+                return File(fileStream, mimeType, fileName);
+            }
+            else
+            {
+                // 大文件下载逻辑
+                return await DownloadLargeFile(filePath, fileName, mimeType);
+            }
+        }
+
+        private async Task<IActionResult> DownloadLargeFile(string filePath, string fileName, string mimeType)
+        {
+            const int chunkSize = 1024 * 1024; // 1MB chunks
+            var fileInfo = new FileInfo(filePath);
+            var fileSize = fileInfo.Length;
+        
+            Response.Headers.Add("Content-Disposition", $"attachment; filename={fileName}");
+            Response.Headers.Add("Content-Type", mimeType);
+            Response.Headers.Add("Content-Length", fileSize.ToString());
+        
+            using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            {
+                var buffer = new byte[chunkSize];
+                int bytesRead;
+                while ((bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    await Response.Body.WriteAsync(buffer, 0, bytesRead);
+                    await Response.Body.FlushAsync();
+                }
+            }
+        
+            _logger.LogInformation("大文件下载成功：{FileName}，大小：{FileSize} bytes，MIME类型：{MimeType}", 
+                fileName, fileSize, mimeType);
+            return new EmptyResult();
         }
 
         private bool IsPathSafe(string path)
