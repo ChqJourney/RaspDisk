@@ -5,13 +5,10 @@
   import FileList from "$lib/components/FileList.svelte";
     import PathNavigator from "$lib/components/PathNavigator.svelte";
     import UploadProgress from "$lib/components/UploadProgress.svelte";
+    import type { Item } from "$lib/types";
+    import { goto } from "$app/navigation";
 
-  type Item = {
-    name: string;
-    type: string;
-    size: number;
-    lastModified: string;
-  };
+
   let explorerPersistStatus = $state<{
     currentPath: string;
     items: Item[];
@@ -217,7 +214,13 @@
     }
     loadFiles();
     document.addEventListener('click', handleClickOutside, true);
-    return ()=>document.removeEventListener('click', handleClickOutside, true);
+    
+    
+    
+    return () => {
+      document.removeEventListener('click', handleClickOutside, true);
+      // signalRService.stop(); // 断开SignalR连接、
+    };
   });
 
   function saveApiKey() {
@@ -494,26 +497,22 @@
       <svg  class="h-6 w-6 fill-slate-500" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="200" height="200"><path d="M415.93 223.79c0-52.98 43.004-95.984 95.984-95.984s95.984 43.004 95.984 95.984-43.004 95.984-95.984 95.984-95.984-43.003-95.984-95.984zM415.93 511.742c0-52.98 43.004-95.984 95.984-95.984s95.984 43.004 95.984 95.984-43.004 95.984-95.984 95.984-95.984-43.004-95.984-95.984zM415.93 799.866c0-52.98 43.004-95.984 95.984-95.984s95.984 43.003 95.984 95.984-43.004 95.983-95.984 95.983-95.984-43.175-95.984-95.983z" fill="#68B8F7"></path></svg>
     </button>
     {#if explorerInstantStatus.showMobileSettingModal}
-    <button aria-label="showApiKeySettings"
-      onclick={() => (explorerInstantStatus.showSettingsModal = true)}
-      class="p-2 absolute right-0 top-4 bg-slate-100 flex items-center hover:bg-slate-200 justify-center rounded-md w-36 h-10 gap-2 text-amber-400 hover:text-gray-800 transition-colors"
-      title="API密码设置"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-5 w-5 sm:h-6 sm:w-6"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-        />
-      </svg>Set api Key
+    <div class="p-2 absolute z-50 right-0 top-4 w-64 bg-white rounded-lg shadow-lg border border-gray-100 transform transition-all duration-200 ease-in-out">
+      <div class="text-gray-700 font-medium px-3 py-2 border-b border-gray-100 hover:bg-slate-300 rounded-md">
+        <button onclick={()=>goto("/transfer")} class="w-full">
+          实时传输文件
+        </button>
+      </div>
+      <div class="text-gray-700 font-medium px-3 py-2 border-b border-gray-100 hover:bg-slate-300 rounded-md">
+        <button aria-label="showApiKeySettings"
+        onclick={() => (explorerInstantStatus.showSettingsModal = true)}
+        class="w-full"
+        title="API密码设置"
+        >
+        设置 API 密钥
     </button>
+  </div>
+</div>
     {/if}
     </div>
 

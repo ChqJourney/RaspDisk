@@ -1,6 +1,7 @@
 using RaspberryPiFileServer.Middlewares;
 using RaspberryPiFileServer.Services;
 using Microsoft.AspNetCore.HttpOverrides;
+using RaspberryPiFileServer.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,14 +10,26 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddHttpContextAccessor();
+
+// 添加SignalR服务
+builder.Services.AddSignalR(options => 
+{
+    // 针对树莓派环境优化SignalR配置
+    options.EnableDetailedErrors = true;
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15); // 降低保活间隔
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30); // 客户端超时时间
+    options.MaximumReceiveMessageSize = 102400; // 100KB
+});
+
 // Add CORS policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:5173")
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -77,13 +90,19 @@ app.Use(async (context, next) =>
     }
 });
 
+// 使用CORS中间件
+app.UseCors("AllowFrontend");
+
+// 使用路由中间件
+app.UseRouting();
+
+// 使用授权中间件
+app.UseAuthorization();
+
+// 映射控制器
 app.MapControllers();
 
-// 添加SPA回退路由
-app.MapFallbackToFile("index.html");
-
-// 记录应用程序启动日志
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
-logger.LogInformation("Application started in {Environment} environment", app.Environment.EnvironmentName);
+// 映射SignalR Hub
+app.MapHub<TransferHub>("/transferHub");
 
 app.Run();

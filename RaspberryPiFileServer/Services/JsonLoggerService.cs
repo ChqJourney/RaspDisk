@@ -1,10 +1,23 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
+using System.Text.Json.Serialization;
 
 namespace RaspberryPiFileServer.Services
 {
     
+    public class LogEntry
+    {
+        public DateTime Timestamp { get; set; }
+        public string Level { get; set; } = "";
+        public int EventId { get; set; }
+        public string Category { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string? Exception { get; set; }
+        public string? State { get; set; }
+        public string IpAddress { get; set; } = "";
+    }
+
     public class JsonLoggerService : ILogger
     {
         private readonly string _logDirectory;
@@ -44,7 +57,7 @@ namespace RaspberryPiFileServer.Services
         {
             if (!IsEnabled(logLevel)) return;
 
-            var logEntry = new
+            var logEntry = new LogEntry
             {
                 Timestamp = DateTime.Now,
                 Level = logLevel.ToString(),
@@ -61,20 +74,28 @@ namespace RaspberryPiFileServer.Services
 
 
 
-        private async Task LogToFileAsync(object logEntry)
+        private async Task LogToFileAsync(LogEntry logEntry)
         {
             var logFileName = GetLogFileName();
             await _semaphore.WaitAsync();
 
             try
             {
-                List<object> existingLogs = new List<object>();
+                List<LogEntry> existingLogs = new List<LogEntry>();
                 if (File.Exists(logFileName))
                 {
                     var existingContent = await File.ReadAllTextAsync(logFileName);
                     if (!string.IsNullOrEmpty(existingContent))
                     {
-                        existingLogs = JsonSerializer.Deserialize<List<object>>(existingContent) ?? new List<object>();
+                        try
+                        {
+                            existingLogs = JsonSerializer.Deserialize<List<LogEntry>>(existingContent) ?? new List<LogEntry>();
+                        }
+                        catch (JsonException)
+                        {
+                            // 如果反序列化失败，创建一个新的日志文件
+                            File.Move(logFileName, logFileName + ".bak", true);
+                        }
                     }
                 }
 
